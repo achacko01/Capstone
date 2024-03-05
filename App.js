@@ -1,7 +1,5 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, View } from 'react-native';
+import { StatusBar, StyleSheet, View } from 'react-native'; // Import StatusBar from react-native
 import LoginScreen from './LoginScreen';
-
 
 export default function App() {
  return (
@@ -11,7 +9,6 @@ export default function App() {
    </View>
  );
 }
-
 
 const styles = StyleSheet.create({
  container: {
