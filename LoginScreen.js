@@ -8,8 +8,8 @@ const [password, setPassword] = useState('');
 
 
 const handleLogin = () => {
-  // Here is where we will eimplement the login logic
-  console.log('Logging in...');
+  // If login is successful, navigate to the Homepage
+  navigation.navigate('Home');
 };
 
 
