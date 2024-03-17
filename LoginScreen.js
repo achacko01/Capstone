@@ -1,36 +1,34 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
-import axios from 'axios'; // Import Axios library
+import axios from 'axios';
+import { useNavigation } from '@react-navigation/native'; // Import useNavigation hook
 
 const LoginScreen = () => {
+  const navigation = useNavigation(); // Initialize navigation
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
     axios.post('http://localhost:4000/login', { email, password })
       .then(response => {
-        // Handle successful login
         console.log('Login successful');
-        // Navigate to the home screen or perform any other action
+        navigation.navigate('Homepage'); // Navigate to the homepage screen
       })
       .catch(error => {
-        // Handle login error
         console.error('Login failed:', error);
-        // Display error message to the user
+        // Handle login error or display error message to the user
       });
   };
 
   const handleSignUp = () => {
     axios.post('http://localhost:4000/signup', { email, password, role: 'member' })
       .then(response => {
-        // Handle successful sign up
         console.log('Sign up successful');
         // Navigate to the home screen or perform any other action
       })
       .catch(error => {
-        // Handle sign up error
         console.error('Sign up failed:', error);
-        // Display error message to the user
+        // Handle sign up error or display error message to the user
       });
   };
 
