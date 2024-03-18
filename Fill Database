@@ -1,0 +1,5 @@
+INSERT INTO users (email, password, role) VALUES
+('jthomas11@manhattan.edu', 'Capstone', 'member'),
+('achacko01@manhattan.edu', 'Capstone', 'member'),
+('hlam03@manhattan.edu', 'Capstone', 'faculty'),
+('tnguyen07@manhattan.edu', 'Capstone', 'faculty');
