@@ -14,7 +14,12 @@ const LoginScreen = () => {
     axios.post('http://192.168.1.225:4000/login', { email, password })
       .then(response => {
         console.log('Login successful');
-        navigation.navigate('Homepage'); // Navigate to the homepage screen
+        // Navigate based on the role of the server
+        if (response.data.role === 'faculty') {
+          navigation.navigate('FacultyHomepage');
+        } else {
+          navigation.navigate('Homepage'); // Navigate to the homepage screen
+        }
       })
       .catch(error => {
         console.error('Login failed:', error);
