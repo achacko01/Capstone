@@ -12,10 +12,15 @@ app.use(cors());
 
 // MySQL Connection
 const connection = mysql.createConnection({
-  host: 'localhost',
+  // Depends on what you're running on
+  // host: 'localhost',
+  host: '127.0.0.1',
   user: 'root',
-  password: 'CMPT456!',
-  database: 'CapstoneGymApp'
+  // Depends on password you created
+  password: 'password',
+  database: 'CapstoneGymApp',
+  // Depends on your specific port number
+  port: 3307
 });
 
 // Connect to MySQL
