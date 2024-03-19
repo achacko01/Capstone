@@ -9,7 +9,9 @@ const LoginScreen = () => {
   const [password, setPassword] = useState('');
 
   const handleLogin = () => {
-    axios.post('http://localhost:4000/login', { email, password })
+    // Depends on what machine you run it on
+    // axios.post('http://localhost:4000/login', { email, password })
+    axios.post('http://192.168.1.225:4000/login', { email, password })
       .then(response => {
         console.log('Login successful');
         navigation.navigate('Homepage'); // Navigate to the homepage screen
@@ -21,7 +23,9 @@ const LoginScreen = () => {
   };
 
   const handleSignUp = () => {
-    axios.post('http://localhost:4000/signup', { email, password, role: 'member' })
+    // Depends on what machine you run it on
+    // axios.post('http://localhost:4000/signup', { email, password, role: 'member' })
+    axios.post('http://192.168.1.225:4000/signup', { email, password, role: 'member' })
       .then(response => {
         console.log('Sign up successful');
         // Navigate to the home screen or perform any other action
