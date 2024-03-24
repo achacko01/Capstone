@@ -1,20 +1,84 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import LoginScreen from './LoginScreen';
-import Homepage from './Homepage'; 
+import RegisterScreen from './RegisterScreen';
+import Homepage from './Homepage';
 import FacultyHomepage from './FacultyHomepage';
+import ReservationPage from './ReservationPage';
+
+import firebase from 'firebase/compat/app';
+import 'firebase/compat/auth';
+import 'firebase/compat/firestore';
+import 'firebase/compat/analytics';
+
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBh5aSvmD-P9zbdyEruAZjr3Xk9Il_ySPk",
+  authDomain: "capstone-authentication-57df3.firebaseapp.com",
+  databaseURL: "https://capstone-authentication-57df3-default-rtdb.firebaseio.com",
+  projectId: "capstone-authentication-57df3",
+  storageBucket: "capstone-authentication-57df3.appspot.com",
+  messagingSenderId: "1324354770",
+  appId: "1:1324354770:web:8470a1f59c10cd0b49b10b",
+  measurementId: "G-9PLK93NBCD"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
 
 const Stack = createStackNavigator();
 
 export default function App() {
+  const [user, setUser] = useState(null); // State to store current user
+  const [firebaseInitialized, setFirebaseInitialized] = useState(false); // Flag to indicate Firebase initialization
+
+  useEffect(() => {
+    // Listen for authentication state changes
+    const unsubscribe = firebase.auth().onAuthStateChanged(currentUser => {
+      setUser(currentUser);
+    });
+
+    // Unsubscribe to the listener when component unmounts
+    return unsubscribe;
+  }, []);
+
+  // Initialize Firebase Analytics if supported
+  useEffect(() => {
+    if (firebase.analytics.isSupported()) {
+      firebase.analytics();
+    }
+  }, []);
+
+  useEffect(() => {
+    // Check if Firebase is initialized
+    if (firebase.apps.length > 0) {
+      setFirebaseInitialized(true);
+    }
+  }, []);
+
+  if (!firebaseInitialized) {
+    return null; // Render nothing until Firebase is initialized
+  }
+
   return (
     <NavigationContainer>
-      <Stack.Navigator initialRouteName="Login">
+      <Stack.Navigator initialRouteName={!user ? 'Login' : 'Homepage'}>
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
+        <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Homepage" component={Homepage} options={{ title: 'Homepage' }} />
-        <Stack.Screen name="FacultyHomepage" component={FacultyHomepage} options={{ title: 'Faculty Homepage '}} />
-      </Stack.Navigator>
+        <Stack.Screen name="FacultyHomepage" component={FacultyHomepage} options={{ title: 'Faculty Homepage' }} />
+        <Stack.Screen name="ReservationPage" component={ReservationPage} options={{ title: 'Reserve a Machine' }} />
+        </Stack.Navigator>
     </NavigationContainer>
   );
 }
