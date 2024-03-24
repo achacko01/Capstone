@@ -5,7 +5,7 @@ const Homepage = ({ navigation }) => {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Gym App</Text>
-      <TouchableOpacity style={styles.button} onPress={() => console.log('Reserve')}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('ReservationPage')}>
         <Text style={styles.buttonText}>Reserve</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.button} onPress={() => console.log('Community Chat')}>
