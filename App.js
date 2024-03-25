@@ -6,6 +6,7 @@ import RegisterScreen from './RegisterScreen';
 import Homepage from './Homepage';
 import FacultyHomepage from './FacultyHomepage';
 import ReservationPage from './ReservationPage';
+import FeedbackPage from './FeedbackPage';
 
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
@@ -78,6 +79,7 @@ export default function App() {
         <Stack.Screen name="Homepage" component={Homepage} options={{ title: 'Homepage' }} />
         <Stack.Screen name="FacultyHomepage" component={FacultyHomepage} options={{ title: 'Faculty Homepage' }} />
         <Stack.Screen name="ReservationPage" component={ReservationPage} options={{ title: 'Reserve a Machine' }} />
+        <Stack.Screen name="FeedbackPage" component={FeedbackPage} options={{ title: 'Feedback' }} />
         </Stack.Navigator>
     </NavigationContainer>
   );
