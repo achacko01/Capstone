@@ -11,7 +11,7 @@ const Homepage = ({ navigation }) => {
       <TouchableOpacity style={styles.button} onPress={() => console.log('Community Chat')}>
         <Text style={styles.buttonText}>Community Chat</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={styles.button} onPress={() => console.log('Feedback')}>
+      <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('FeedbackPage')}>
         <Text style={styles.buttonText}>Feedback</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.button} onPress={() => console.log('Leaderboards')}>
