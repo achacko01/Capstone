@@ -5,19 +5,22 @@ import LoginScreen from './LoginScreen';
 import RegisterScreen from './RegisterScreen';
 import Homepage from './Homepage';
 import FacultyHomepage from './FacultyHomepage';
+import AddMachineScreen from './AddMachineScreen';
+import RemoveMachineScreen from './RemoveMachineScreen';
+import AddMachineForm from './AddMachineForm';
 import ReservationPage from './ReservationPage';
 import FeedbackPage from './FeedbackPage';
-
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
 import 'firebase/compat/analytics';
-
+// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
 import { getAnalytics } from "firebase/analytics";
+// https://firebase.google.com/docs/web/setup#available-libraries
 
-
-
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyBh5aSvmD-P9zbdyEruAZjr3Xk9Il_ySPk",
   authDomain: "capstone-authentication-57df3.firebaseapp.com",
@@ -78,9 +81,12 @@ export default function App() {
         <Stack.Screen name="Register" component={RegisterScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Homepage" component={Homepage} options={{ title: 'Homepage' }} />
         <Stack.Screen name="FacultyHomepage" component={FacultyHomepage} options={{ title: 'Faculty Homepage' }} />
+        <Stack.Screen name="AddMachine" component={AddMachineScreen} options={{ title: 'Machine List' }} />
+        <Stack.Screen name="RemoveMachine" component={RemoveMachineScreen} options={{ title: 'Machine List' }} />
+        <Stack.Screen name="AddMachineForm" component={AddMachineForm} options={{ title: 'Add Machine' }} />
         <Stack.Screen name="ReservationPage" component={ReservationPage} options={{ title: 'Reserve a Machine' }} />
         <Stack.Screen name="FeedbackPage" component={FeedbackPage} options={{ title: 'Feedback' }} />
-        </Stack.Navigator>
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }
