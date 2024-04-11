@@ -1,15 +1,30 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from 'react-native';
+import firebase from 'firebase/compat/app'; // Make sure to import firebase
+import 'firebase/compat/firestore'; // Import Firestore
 
 const FeedbackPage = ({ navigation }) => {
-  const [feedback, setFeedback] = useState('');
+  const [feedbackText, setFeedbackText] = useState('');
 
-  const handleSubmit = () => {
-    // Here you would typically send the feedback to your backend or Firebase
-    // After submitting, you can navigate back or show a confirmation message
-    Alert.alert("Feedback Submitted");
-    console.log(feedback);
-    navigation.goBack();
+  const handleSubmit = async () => {
+    if (feedbackText.trim() === '') {
+      Alert.alert('Feedback is empty', 'Please enter your feedback before submitting.');
+      return;
+    }
+  
+    try {
+      const feedbackRef = firebase.firestore().collection('feedback');
+      await feedbackRef.add({
+        text: feedbackText, // Changed key to 'text' for clarity
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(), // Add timestamp
+      });
+      Alert.alert("Feedback Submitted");
+      setFeedbackText(''); // Clear the feedback text
+      navigation.goBack(); // Navigate back after submission
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Feedback Submission Failed", "Please try again.");
+    }
   };
 
   return (
@@ -18,8 +33,8 @@ const FeedbackPage = ({ navigation }) => {
       <TextInput
         style={styles.input}
         placeholder="Type your feedback here..."
-        onChangeText={setFeedback}
-        value={feedback}
+        onChangeText={setFeedbackText} // Update to use the renamed state variable
+        value={feedbackText} // Update to use the renamed state variable
         multiline
         numberOfLines={10}
       />
