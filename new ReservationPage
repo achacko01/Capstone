@@ -21,6 +21,8 @@ const [reservationTime, setReservationTime] = useState(0); // Track reserved tim
 const [reservedMachine, setReservedMachine] = useState(null); // Track the reserved machine
 const [queueInfo, setQueueInfo] = useState({}); // Track queue information for each machine
 
+
+
 useEffect(() => {
 // Fetch queue information for all machines when the component mounts
 fetchQueueInfo();
@@ -132,39 +134,60 @@ if (!isNaN(time) && time > 0 && time <= 30) {
 };
 
 const checkAndMakeReservation = (machine, time) => {
-db.collection('reservations')
- .where('machineId', '==', machine.id)
- .orderBy('endTime', 'desc')
- .limit(1)
- .get()
- .then((querySnapshot) => {
-   let nextAvailableTime = new Date();
-   if (!querySnapshot.empty) {
-     const lastReservation = querySnapshot.docs[0].data();
-     nextAvailableTime = new Date(lastReservation.endTime.toMillis());
-   }
+  db.collection('reservations')
+    .where('machineId', '==', machine.id)
+    .orderBy('endTime', 'desc')
+    .limit(1)
+    .get()
+    .then((querySnapshot) => {
+      let nextAvailableTime = new Date();
+      if (!querySnapshot.empty) {
+        const lastReservation = querySnapshot.docs[0].data();
+        nextAvailableTime = new Date(lastReservation.endTime.toMillis());
+      }
 
-   const startTime = nextAvailableTime.toLocaleString('en-US', { timeZone: 'America/New_York' });
-   const endTime = firebase.firestore.Timestamp.fromDate(new Date(nextAvailableTime.getTime() + time * 60000));
+      const startTime = nextAvailableTime.toLocaleString('en-US', { timeZone: 'America/New_York' });
+      const endTime = firebase.firestore.Timestamp.fromDate(new Date(nextAvailableTime.getTime() + time * 60000));
 
-   db.collection('reservations')
-     .add({
-       userId: firebase.auth().currentUser.uid,
-       machineId: machine.id,
-       startTime: startTime,
-       endTime: endTime,
-     })
-     .then(() => {
-       console.log('Reservation added to Firestore');
-       addToQueue(machine.id, time);
-     })
-     .catch((error) => {
-       console.error('Error adding reservation: ', error);
-     });
- })
- .catch((error) => {
-   console.error('Error fetching existing reservations: ', error);
- });
+      db.collection('reservations')
+        .add({
+          userId: firebase.auth().currentUser.uid,
+          machineId: machine.id,
+          startTime: startTime,
+          endTime: endTime,
+        })
+        .then(() => {
+          console.log('Reservation added to Firestore');
+          addToQueue(machine.id, time);
+          updateMachineUsageHistory(machine.id, startTime); // Call the new function to update usage history
+        })
+        .catch((error) => {
+          console.error('Error adding reservation: ', error);
+        });
+    })
+    .catch((error) => {
+      console.error('Error fetching existing reservations: ', error);
+    });
+};
+
+const updateMachineUsageHistory = async (machineId, startTime) => {
+  const currentDate = new Date(startTime).toDateString();
+
+  try {
+    const machineUsageHistoryRef = db.collection('machineUsageHistory').doc(`${machineId}_${currentDate}`);
+    const doc = await machineUsageHistoryRef.get();
+
+    if (doc.exists) {
+      // Document exists, increment the usageCount
+      const currentUsageCount = doc.data().usageCount;
+      await machineUsageHistoryRef.update({ usageCount: currentUsageCount + 1 });
+    } else {
+      // Document doesn't exist, create a new one
+      await machineUsageHistoryRef.set({ machineId, usageCount: 1, date: currentDate });
+    }
+  } catch (error) {
+    console.error('Error updating machine usage history:', error);
+  }
 };
 
 const reserveAtNextAvailableTime = (machine, nextAvailableTime) => {
@@ -245,17 +268,104 @@ db.collection('queues')
 };
 
 const removeFromQueue = (machineId, userId) => {
-db.collection('queues').doc('allMachinesQueue').update({
-  [`${machineId}.users`]: firebase.firestore.FieldValue.arrayRemove(userId)
-})
-.then(() => {
-  console.log('User removed from the queue for machine:', machineId);
-  fetchQueueInfo();
-})
-.catch((error) => {
-  console.error('Error removing user from the queue:', error);
-});
+  db.collection('queues').doc('allMachinesQueue').update({
+    [`${machineId}.users`]: firebase.firestore.FieldValue.arrayRemove(userId)
+  })
+  .then(() => {
+    console.log('User removed from the queue for machine:', machineId);
+    fetchQueueInfo();
+    checkQueueAndPromptExtension(machineId); // Call the function here
+  })
+  .catch((error) => {
+    console.error('Error removing user from the queue:', error);
+  });
 };
+
+
+const checkQueueAndPromptExtension = (machineId) => {
+  const userId = firebase.auth().currentUser.uid;
+  db.collection('queues').doc('allMachinesQueue').get()
+    .then((docSnapshot) => {
+      if (docSnapshot.exists) {
+        const machineQueue = docSnapshot.data()[machineId];
+        if (machineQueue && machineQueue.users.length === 0) {
+          // No one else in the queue, prompt the user to extend their session
+          promptExtendSession(machineId);
+        }
+      }
+    })
+    .catch((error) => {
+      console.error('Error checking queue:', error);
+    });
+};
+
+// Function to prompt the user to extend their session
+const promptExtendSession = (machineId) => {
+  Alert.alert(
+    'Extend Session',
+    'Your reservation has ended, and there is no one else in the queue. Would you like to extend your session?',
+    [
+      { text: 'No', style: 'cancel' },
+      { text: 'Yes', onPress: () => handleExtendSession(machineId) },
+    ]
+  );
+};
+
+// Function to handle the user's response to extend their session
+const handleExtendSession = (machineId) => {
+  Alert.prompt(
+    'Enter Extension Time',
+    'Enter the desired extension time in minutes (max 30 minutes):',
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'OK', onPress: (input) => handleExtensionTimeInput(machineId, input) },
+    ],
+    'plain-text'
+  );
+};
+
+// Function to handle the user's input for the extension time
+const handleExtensionTimeInput = (machineId, input) => {
+  const time = parseInt(input);
+  if (!isNaN(time) && time > 0 && time <= 30) {
+    extendReservation(machineId, time);
+  } else {
+    Alert.alert('Invalid Input', 'Please enter a valid number between 1 and 30.');
+  }
+};
+
+// Function to extend the user's reservation
+const extendReservation = (machineId, time) => {
+  const userId = firebase.auth().currentUser.uid;
+  db.collection('reservations')
+    .where('userId', '==', userId)
+    .where('machineId', '==', machineId)
+    .orderBy('endTime', 'desc')
+    .limit(1)
+    .get()
+    .then((querySnapshot) => {
+      if (!querySnapshot.empty) {
+        const reservation = querySnapshot.docs[0].data();
+        const currentEndTime = reservation.endTime.toMillis();
+        const newEndTime = firebase.firestore.Timestamp.fromDate(new Date(currentEndTime + time * 60000));
+        db.collection('reservations').doc(querySnapshot.docs[0].id)
+          .update({ endTime: newEndTime })
+          .then(() => {
+            console.log('Reservation extended successfully');
+            addToQueue(machineId, time);
+          })
+          .catch((error) => {
+            console.error('Error updating reservation:', error);
+          });
+      } else {
+        console.error('No active reservation found for the current user and machine');
+      }
+    })
+    .catch((error) => {
+      console.error('Error fetching reservation:', error);
+    });
+};
+
 
 const checkDocumentExists = () => {
 db.collection('queues').doc('allMachinesQueue').get()
