@@ -5,12 +5,12 @@ import 'firebase/compat/firestore';
 
 const machineData = [
   { name: 'Bench Press', collection: 'bench_press', image: require('./assets/Bench.jpeg') },
-  { name: 'Bicep Curl', collection: 'bicep_curl', image: require('./assets/Bicep Curl.webp') },
-  { name: 'Chest Press', collection: 'chest_press', image: require('./assets/Chest Press.jpeg') },
-  { name: 'Hack Squat', collection: 'hack_squat', image: require('./assets/Hack Squat.webp') },
-  { name: 'Lat Pulldown', collection: 'lat_pulldown', image: require('./assets/Lat Pulldown.webp') },
-  { name: 'Leg Press', collection: 'leg_press', image: require('./assets/Leg Press.jpeg') },
-  { name: 'Squat Rack', collection: 'squat_rack', image: require('./assets/Squat Rack.png') },
+  { name: 'Bicep Curl', collection: 'bicep_curl', image: require('./assets/BicepCurl.webp') },
+  { name: 'Chest Press', collection: 'chest_press', image: require('./assets/ChestPress.jpeg') },
+  { name: 'Hack Squat', collection: 'hack_squat', image: require('./assets/HackSquat.webp') },
+  { name: 'Lat Pulldown', collection: 'lat_pulldown', image: require('./assets/LatPulldown.webp') },
+  { name: 'Leg Press', collection: 'leg_press', image: require('./assets/LegPress.jpeg') },
+  { name: 'Squat Rack', collection: 'squat_rack', image: require('./assets/SquatRack.png') },
 ];
 
 const AddMachineScreen = ({ navigation }) => {
@@ -22,11 +22,12 @@ const AddMachineScreen = ({ navigation }) => {
         const machineDataWithStatus = await Promise.all(
           machineData.map(async ({ name, collection }) => {
             const querySnapshot = await firebase.firestore().collection(collection).get();
-            const machines = querySnapshot.docs.map(doc => {
+            const machines = querySnapshot.docs.map((doc, index) => {
               const data = doc.data();
               return {
-                id: data.id,
+                id: `${name}#${index + 1}`, // Append order number to machine name
                 name: data.name,
+                machineId: doc.id, // Add machine ID
                 occupied: data.occupied,
               };
             });
@@ -56,6 +57,7 @@ const AddMachineScreen = ({ navigation }) => {
               <Image source={machineData.find(m => m.name === name).image} style={styles.machineImage} />
               <View style={styles.machineDetails}>
                 <Text style={styles.machineName}>{machine.id}</Text>
+                <Text style={styles.machineId}>ID: {machine.machineId}</Text>
                 <Text style={styles.machineAvailability}>{machine.occupied ? 'In Use' : 'Available'}</Text>
               </View>
             </TouchableOpacity>
@@ -102,6 +104,10 @@ const styles = StyleSheet.create({
   machineName: {
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  machineId: {
+    fontSize: 14,
+    color: '#666',
   },
   machineAvailability: {
     fontSize: 14,
