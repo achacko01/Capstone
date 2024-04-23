@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
@@ -11,14 +11,18 @@ const LoginScreen = ({ navigation }) => {
   const handleLogin = async () => {
     try {
       const { user } = await firebase.auth().signInWithEmailAndPassword(email, password);
-  
+
       if (user) {
+        if (!user.emailVerified) {
+          throw new Error('Check email for verification');
+        }
+
         const userDocRef = firebase.firestore().collection('users').doc(user.uid);
         const userDocSnapshot = await userDocRef.get();
-  
+
         if (userDocSnapshot.exists) {
           const userData = userDocSnapshot.data();
-  
+
           if (userData.isAdmin) {
             // Redirect to the faculty homepage
             navigation.navigate('FacultyHomepage');
@@ -35,7 +39,8 @@ const LoginScreen = ({ navigation }) => {
         // Handle case where user is not authenticated
       }
     } catch (error) {
-      console.error('Login failed!');
+      Alert.alert('Error', error.message);
+      console.error('Login failed:', error);
       // Handle login error or display error message to the user
     }
   };
