@@ -59,14 +59,22 @@ exports.sendFeedbackEmail = functions.firestore.document("feedback/{docId}")
     console.log('Faculty Emails:', facultyEmails);
 
     // Prepare the email
-    const mailOptions = {
+    const mailOptionsFaculty = {
       from: "capstonegymapp@gmail.com",
       to: facultyEmails, // An array of recipient emails
-      cc: userEmail,
       subject: "New Feedback Submitted",
       text: `New feedback has been submitted by ${userName} (${userEmail}):\n\n${feedback}`,
     };
 
     // Send the email
-    await sendEmail(mailOptions);
+    await sendEmail(mailOptionsFaculty);
+
+    const mailOptionsUsers = {
+      from: "capstonegymapp@gmail.com",
+      to: userEmail,
+      subject: "Thank You For Your Feedback",
+      text: `Dear ${userName}, \n\nThank you for your valuable feedback!`
+    };
+
+    await sendEmail(mailOptionsUsers)
   });
