@@ -20,6 +20,8 @@ const ReservationPage = ({ navigation }) => {
 const [reservationTime, setReservationTime] = useState(0); // Track reserved time
 const [reservedMachine, setReservedMachine] = useState(null); // Track the reserved machine
 const [queueInfo, setQueueInfo] = useState({}); // Track queue information for each machine
+const [reservationEndTime, setReservationEndTime] = useState(null); // Add this line
+
 
 useEffect(() => {
 // Fetch queue information for all machines when the component mounts
@@ -157,7 +159,9 @@ const checkAndMakeReservation = (machine, time) => {
         .then(() => {
           console.log('Reservation added to Firestore');
           addToQueue(machine.id, time);
-          updateMachineUsageHistory(machine.id, startTime); // Call the new function to update usage history
+          updateMachineUsageHistory(machine.id, startTime, endTime, firebase.auth().currentUser.uid);
+          setReservationEndTime(endTime.toMillis());
+          scheduleRemoveFromQueue(machine.id, endTime.toMillis());
         })
         .catch((error) => {
           console.error('Error adding reservation: ', error);
@@ -168,20 +172,43 @@ const checkAndMakeReservation = (machine, time) => {
     });
 };
 
-const updateMachineUsageHistory = async (machineId, startTime) => {
+const scheduleRemoveFromQueue = (machineId, endTimeMillis) => {
+  const userId = firebase.auth().currentUser.uid;
+  const delay = endTimeMillis - Date.now();
+
+  setTimeout(() => {
+    removeFromQueue(machineId, userId);
+  }, delay);
+};
+
+
+const updateMachineUsageHistory = async (machineId, startTime, endTime, userId) => {
   const currentDate = new Date(startTime).toDateString();
 
   try {
     const machineUsageHistoryRef = db.collection('machineUsageHistory').doc(`${machineId}_${currentDate}`);
     const doc = await machineUsageHistoryRef.get();
 
+    const reservationData = {
+      machineId,
+      userId,
+      startTime,
+      endTime,
+    };
+
     if (doc.exists) {
-      // Document exists, increment the usageCount
-      const currentUsageCount = doc.data().usageCount;
-      await machineUsageHistoryRef.update({ usageCount: currentUsageCount + 1 });
+      // Document exists, add the new reservation to the reservations array
+      const currentReservations = doc.data().reservations || [];
+      await machineUsageHistoryRef.update({
+        reservations: [...currentReservations, reservationData],
+      });
     } else {
-      // Document doesn't exist, create a new one
-      await machineUsageHistoryRef.set({ machineId, usageCount: 1, date: currentDate });
+      // Document doesn't exist, create a new one with the reservation data
+      await machineUsageHistoryRef.set({
+        machineId,
+        reservations: [reservationData],
+        date: currentDate,
+      });
     }
   } catch (error) {
     console.error('Error updating machine usage history:', error);
@@ -195,13 +222,13 @@ const reserveAtNextAvailableTime = (machine, nextAvailableTime) => {
     .limit(1)
     .get()
     .then((querySnapshot) => {
+      let updatedNextAvailableTime = new Date();
       if (!querySnapshot.empty) {
         const lastReservation = querySnapshot.docs[0].data();
-        if (lastReservation && lastReservation.endTime) {
-          nextAvailableTime = new Date(lastReservation.endTime.toMillis());
-        }
+        const lastReservationEndTime = new Date(lastReservation.endTime.toMillis());
+        updatedNextAvailableTime = new Date(Math.max(updatedNextAvailableTime.getTime(), lastReservationEndTime.getTime()));
       }
-      const formattedTime = nextAvailableTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true });
+      const formattedTime = updatedNextAvailableTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: true });
       Alert.prompt(
         'Enter Reservation Time',
         `The machine is available at ${formattedTime}. Enter the desired reservation time in minutes (max 30 minutes):`,
@@ -213,7 +240,7 @@ const reserveAtNextAvailableTime = (machine, nextAvailableTime) => {
           {
             text: 'OK',
             onPress: (input) => {
-              handleReservationTimeInput(machine, input, nextAvailableTime);
+              handleReservationTimeInput(machine, input, updatedNextAvailableTime);
             },
           },
         ],
@@ -224,45 +251,44 @@ const reserveAtNextAvailableTime = (machine, nextAvailableTime) => {
       console.error('Error fetching existing reservations: ', error);
     });
 };
+   
 
 const addToQueue = (machineId, time) => {
-const userId = firebase.auth().currentUser.uid;
+  const userId = firebase.auth().currentUser.uid;
 
-db.collection('queues')
-.doc('allMachinesQueue')
-.get()
-.then((docSnapshot) => {
-  if (docSnapshot.exists) {
-    db.collection('queues')
-      .doc('allMachinesQueue')
-      .update({
-        [`${machineId}.users`]: firebase.firestore.FieldValue.arrayUnion(userId),
-      })
-      .then(() => {
-        console.log('User added to the queue for machine:', machineId);
-        fetchQueueInfo();
-        setTimeout(() => removeFromQueue(machineId, userId), time * 60000);
-      })
-      .catch((error) => {
-        console.error('Error adding user to the queue:', error);
-      });
-  } else {
-    db.collection('queues')
-      .doc('allMachinesQueue')
-      .set({ [machineId]: { users: [userId] } })
-      .then(() => {
-        console.log('Document created and user added to the queue for machine:', machineId);
-        fetchQueueInfo();
-        setTimeout(() => removeFromQueue(machineId, userId), time * 60000);
-      })
-      .catch((error) => {
-        console.error('Error creating document and adding user to the queue:', error);
-      });
-  }
-})
-.catch((error) => {
-  console.error('Error checking document existence:', error);
-});
+  db.collection('queues')
+    .doc('allMachinesQueue')
+    .get()
+    .then((docSnapshot) => {
+      if (docSnapshot.exists) {
+        db.collection('queues')
+          .doc('allMachinesQueue')
+          .update({
+            [`${machineId}.users`]: firebase.firestore.FieldValue.arrayUnion(userId),
+          })
+          .then(() => {
+            console.log('User added to the queue for machine:', machineId);
+            fetchQueueInfo();
+          })
+          .catch((error) => {
+            console.error('Error adding user to the queue:', error);
+          });
+      } else {
+        db.collection('queues')
+          .doc('allMachinesQueue')
+          .set({ [machineId]: { users: [userId] } })
+          .then(() => {
+            console.log('Document created and user added to the queue for machine:', machineId);
+            fetchQueueInfo();
+          })
+          .catch((error) => {
+            console.error('Error creating document and adding user to the queue:', error);
+          });
+      }
+    })
+    .catch((error) => {
+      console.error('Error checking document existence:', error);
+    });
 };
 
 const removeFromQueue = (machineId, userId) => {
@@ -287,8 +313,22 @@ const checkQueueAndPromptExtension = (machineId) => {
       if (docSnapshot.exists) {
         const machineQueue = docSnapshot.data()[machineId];
         if (machineQueue && machineQueue.users.length === 0) {
-          // No one else in the queue, prompt the user to extend their session
-          promptExtendSession(machineId);
+          // Check if the current user is the one whose reservation just ended
+          db.collection('reservations')
+            .where('machineId', '==', machineId)
+            .where('userId', '==', userId)
+            .orderBy('endTime', 'desc')
+            .limit(1)
+            .get()
+            .then((querySnapshot) => {
+              if (!querySnapshot.empty) {
+                // The current user's reservation just ended, prompt to extend
+                promptExtendSession(machineId);
+              }
+            })
+            .catch((error) => {
+              console.error('Error checking user reservation:', error);
+            });
         }
       }
     })
@@ -299,14 +339,29 @@ const checkQueueAndPromptExtension = (machineId) => {
 
 // Function to prompt the user to extend their session
 const promptExtendSession = (machineId) => {
-  Alert.alert(
-    'Extend Session',
-    'Your reservation has ended, and there is no one else in the queue. Would you like to extend your session?',
-    [
-      { text: 'No', style: 'cancel' },
-      { text: 'Yes', onPress: () => handleExtendSession(machineId) },
-    ]
-  );
+  const userId = firebase.auth().currentUser.uid;
+  db.collection('reservations')
+    .where('machineId', '==', machineId)
+    .where('userId', '==', userId)
+    .orderBy('endTime', 'desc')
+    .limit(1)
+    .get()
+    .then((querySnapshot) => {
+      if (!querySnapshot.empty) {
+        // The current user's reservation just ended
+        Alert.alert(
+          'Extend Session',
+          'Your reservation has ended, and there is no one else in the queue. Would you like to extend your session?',
+          [
+            { text: 'No', style: 'cancel' },
+            { text: 'Yes', onPress: () => handleExtendSession(machineId) },
+          ]
+        );
+      }
+    })
+    .catch((error) => {
+      console.error('Error checking user reservation:', error);
+    });
 };
 
 // Function to handle the user's response to extend their session
@@ -351,6 +406,7 @@ const extendReservation = (machineId, time) => {
           .then(() => {
             console.log('Reservation extended successfully');
             addToQueue(machineId, time);
+            scheduleRemoveFromQueue(machineId, newEndTime.toMillis()); // Schedule removal from queue with the new end time
           })
           .catch((error) => {
             console.error('Error updating reservation:', error);
@@ -380,28 +436,25 @@ db.collection('queues').doc('allMachinesQueue').get()
 };
 
 return (
-<ScrollView contentContainerStyle={styles.container}>
-  <Text style={styles.pageTitle}>Reserve a Machine</Text>
-  {machines.map((machine, index) => (
-    <View key={index} style={styles.machineCard}>
-      <Image source={machine.image} style={styles.machineImage} />
-      <Text style={styles.machineName}>{machine.name}</Text>
-      <TouchableOpacity style={styles.reserveButton} onPress={() => { reserveMachine(machine); }}>
-        <Text style={styles.reserveButtonText}>Reserve</Text>
-      </TouchableOpacity>
-      {/* Display queue information */}
-      <View style={styles.queueInfo}>
-        {/* Display number of users in the queue */}
-        <Text>Queue: {queueInfo[machine.id] && queueInfo[machine.id].users ? queueInfo[machine.id].users.length : 0} users</Text>
-        {/* Display estimated wait time if user is in the queue */}
-        {queueInfo[machine.id] && queueInfo[machine.id].users && queueInfo[machine.id].users.includes(firebase.auth().currentUser.uid) && (
-          <Text>Estimated Wait Time: Calculating...</Text>
-        )}
+  <ScrollView contentContainerStyle={styles.container}>
+    <Text style={styles.pageTitle}>Reserve a Machine</Text>
+    {machines.map((machine, index) => (
+      <View key={index} style={styles.machineCard}>
+        <Image source={machine.image} style={styles.machineImage} />
+        <Text style={styles.machineName}>{machine.name}</Text>
+        <TouchableOpacity style={styles.reserveButton} onPress={() => { reserveMachine(machine); }}>
+          <Text style={styles.reserveButtonText}>Reserve</Text>
+        </TouchableOpacity>
+        {/* Display queue information */}
+        <View style={styles.queueInfo}>
+          {/* Display number of users in the queue */}
+          <Text>Queue: {queueInfo[machine.id] && queueInfo[machine.id].users ? queueInfo[machine.id].users.length : 0} users</Text>
+        </View>
       </View>
-    </View>
-  ))}
-</ScrollView>
+    ))}
+  </ScrollView>
 );
+
 };
 
 const styles = StyleSheet.create({
