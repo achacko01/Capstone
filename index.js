@@ -12,7 +12,7 @@ const oAuth2Client = new google.auth.OAuth2(
 );
 
 oAuth2Client.setCredentials({
-  refresh_token: "1//04zYYDDeEfBaQCgYIARAAGAQSNwF-L9IrV0rmGXDE6lXLUxfxnFZq6zDHMh4RMs-X6nNXWoyfzMN_VbWCFAtiU2Uy_gJEKvHIUOw",
+  refresh_token: "1//042o_9bgAdWt5CgYIARAAGAQSNwF-L9Ir2b__wf_J2AiWTjoYaAkusjruFeKFih5YgX5Bt1D88xb97mUBe63zeIj-9aPYVJjxTBM",
 });
 
 async function sendEmail(mailOptions) {
@@ -25,7 +25,7 @@ async function sendEmail(mailOptions) {
         user: "capstonegymapp@gmail.com",
         clientId: "1324354770-dtg40alroc4hjsga6119kp528on63nb6.apps.googleusercontent.com",
         clientSecret: "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",
-        refreshToken: "1//04zYYDDeEfBaQCgYIARAAGAQSNwF-L9IrV0rmGXDE6lXLUxfxnFZq6zDHMh4RMs-X6nNXWoyfzMN_VbWCFAtiU2Uy_gJEKvHIUOw",
+        refreshToken: "1//042o_9bgAdWt5CgYIARAAGAQSNwF-L9Ir2b__wf_J2AiWTjoYaAkusjruFeKFih5YgX5Bt1D88xb97mUBe63zeIj-9aPYVJjxTBM",
         accessToken: accessToken.token // Here we are using the fresh access token
       },
       tls: {
